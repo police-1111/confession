@@ -1,3 +1,35 @@
+/* ============================
+   PAGE LOADER LOGIC
+============================= */
+
+const loginPage = document.getElementById("screen-home");
+const deniedPage = document.getElementById("screen-denied");
+const lovePage = document.getElementById("screen-love");
+
+const params = new URLSearchParams(window.location.search);
+const status = params.get("auth");  // "success" or "denied"
+
+if (status === "success") {
+  loginPage.style.display = "none";
+  deniedPage.style.display = "none";
+  lovePage.style.display = "block";
+} 
+else if (status === "denied") {
+  loginPage.style.display = "none";
+  lovePage.style.display = "none";
+  deniedPage.style.display = "flex";
+} 
+else {
+  deniedPage.style.display = "none";
+  lovePage.style.display = "none";
+  loginPage.style.display = "flex";
+}
+
+/* ============================
+   CONFESSION PAGE SCRIPT
+============================= */
+
+// === Buttons & Elements ===
 const noBtn = document.getElementById("no");
 const yesBtn = document.getElementById("yes");
 const dateBtn = document.getElementById("date");
@@ -7,28 +39,38 @@ const loveImage = document.getElementById("loveImage");
 const dateImage = document.getElementById("dateImage");
 const rejectImage = document.getElementById("rejectImage");
 
+// === Audio Files ===
 let loveAudio = new Audio("love.mp3");
 let rejectAudio = new Audio("reject.mp3");
 let dateAudio = new Audio("date.mp3");
 
-// 🌸 Personal Vault Feature (Dynamic from Cloudinary)
-// 🌸 Personal Vault Feature (Dynamic from Cloudinary)
+// === Vault Section ===
 const vaultBtn = document.getElementById("vault");
 const vaultSection = document.getElementById("vaultSection");
 const vaultImagesDiv = document.getElementById("vaultImages");
 const correctPassword = "11112003";
 
+// === Modal Elements ===
 const imageModal = document.getElementById("imageModal");
 const modalImage = document.getElementById("modalImage");
 const closeModal = document.getElementById("closeModal");
 
-vaultSection.style.display = "none"; // hidden initially
+vaultSection.style.display = "none";
+
+// Dynamic base URL
+const apiBase = window.location.origin;
+
+
+/* ============================
+       VAULT SECTION
+============================= */
 
 vaultBtn.addEventListener("click", async () => {
   const confirmOpen = confirm("Do you want to see the personal vault? 💌");
   if (!confirmOpen) return;
 
-  const enteredPassword = prompt("Enter the privacy password 🔐  \n hint: birth date ");
+  const enteredPassword = prompt("Enter the privacy password 🔐\nHint: birth date");
+
   if (enteredPassword !== correctPassword) {
     alert("Wrong password 😢");
     return;
@@ -38,70 +80,76 @@ vaultBtn.addEventListener("click", async () => {
   vaultSection.style.display = "block";
   vaultSection.scrollIntoView({ behavior: "smooth" });
 
-  // Fetch images from your Node.js server (Cloudinary)
   vaultImagesDiv.innerHTML = "<p>Fetching photos from cloud ☁️...</p>";
+
   try {
-    const res = await fetch("/api/vault");
+    const res = await fetch(`${apiBase}/api/vault`);
     const data = await res.json();
 
-vaultImagesDiv.innerHTML = "";
+    vaultImagesDiv.innerHTML = "";
 
-if (data.images?.length > 0 || data.videos?.length > 0) {
-  // 🖼️ Display images
-  data.images?.forEach((url) => {
-    const img = document.createElement("img");
-    img.src = url;
-    img.alt = "Vault image";
-    img.loading = "lazy";
-    img.addEventListener("click", () => openImageModal(url));
-    vaultImagesDiv.appendChild(img);
-  });
+    // Images
+    data.images?.forEach(url => {
+      const img = document.createElement("img");
+      img.src = url;
+      img.alt = "Vault image";
+      img.loading = "lazy";
+      img.addEventListener("click", () => openImageModal(url));
+      vaultImagesDiv.appendChild(img);
+    });
 
-  // 🎞️ Display videos
-data.videos?.forEach((url) => {
-  // Create a wrapper for video + button
-  const videoContainer = document.createElement("div");
-  videoContainer.classList.add("video-container");
+    // Videos
+    data.videos?.forEach(url => {
+      const videoContainer = document.createElement("div");
+      videoContainer.classList.add("video-container");
 
-  // Create the video element
-  const video = document.createElement("video");
-  video.src = url;
-  video.controls = true;
-  video.preload = "metadata";
-  video.classList.add("vault-video");
+      const video = document.createElement("video");
+      video.src = url;
+      video.controls = true;
+      video.preload = "metadata";
 
-  // Create fullscreen (square) button
-  const fullscreenBtn = document.createElement("button");
-  fullscreenBtn.innerHTML = "⬜";
-  fullscreenBtn.classList.add("fullscreen-btn");
-  fullscreenBtn.title = "Full view";
+      const fullscreenBtn = document.createElement("button");
+      fullscreenBtn.innerHTML = "⬜";
+      fullscreenBtn.classList.add("fullscreen-btn");
+      fullscreenBtn.addEventListener("click", () => openVideoModal(url));
 
-  // Open fullscreen when button clicked
-  fullscreenBtn.addEventListener("click", () => {
-    openVideoModal(url);
-  });
+      videoContainer.appendChild(video);
+      videoContainer.appendChild(fullscreenBtn);
+      vaultImagesDiv.appendChild(videoContainer);
+    });
 
-  // Add video and button into container
-  videoContainer.appendChild(video);
-  videoContainer.appendChild(fullscreenBtn);
-  vaultImagesDiv.appendChild(videoContainer);
-});
-
-}
- else {
-      vaultImagesDiv.innerHTML = "<p>No images found 😢</p>";
-    }
   } catch (err) {
-    vaultImagesDiv.innerHTML = "<p>Error loading images ⚠️</p>";
+    vaultImagesDiv.innerHTML = "<p>Error loading media ⚠️</p>";
     console.error(err);
   }
 });
 
+/* ============================
+       IMAGE MODAL
+============================= */
 
-// 🎞️ Video fullscreen modal
+function openImageModal(url) {
+  modalImage.src = url;
+  imageModal.style.display = "flex";
+}
+
+closeModal.addEventListener("click", () => {
+  imageModal.style.display = "none";
+});
+
+imageModal.addEventListener("click", e => {
+  if (e.target === imageModal) {
+    imageModal.style.display = "none";
+  }
+});
+
+/* ============================
+       VIDEO MODAL
+============================= */
+
 const videoModal = document.createElement("div");
 videoModal.id = "videoModal";
-videoModal.className = "image-modal"; // reuse same modal style
+videoModal.className = "image-modal";
 videoModal.innerHTML = `
   <span id="closeVideoModal" class="close">&times;</span>
   <video id="modalVideo" class="modal-content" controls></video>
@@ -121,8 +169,7 @@ closeVideoModal.addEventListener("click", () => {
   videoModal.style.display = "none";
 });
 
-// Close when clicking outside
-videoModal.addEventListener("click", (e) => {
+videoModal.addEventListener("click", e => {
   if (e.target === videoModal) {
     modalVideo.pause();
     videoModal.style.display = "none";
@@ -130,35 +177,18 @@ videoModal.addEventListener("click", (e) => {
 });
 
 
+/* ============================
+    BUTTON ACTION LOGIC
+============================= */
 
-
-
-
-// Open modal
-function openImageModal(url) {
-  modalImage.src = url;
-  imageModal.style.display = "flex";
-}
-
-// Close modal
-closeModal.addEventListener("click", () => {
-  imageModal.style.display = "none";
-});
-
-// Close on background click
-imageModal.addEventListener("click", (e) => {
-  if (e.target === imageModal) {
-    imageModal.style.display = "none";
-  }
-});
-
-// Move "No" button away when mouse is close
+// Floating "No" Button
 document.addEventListener("mousemove", (e) => {
   const rect = noBtn.getBoundingClientRect();
   const distance = Math.hypot(
     e.clientX - (rect.left + rect.width / 2),
     e.clientY - (rect.top + rect.height / 2)
   );
+
   if (distance < 100) {
     const parentRect = noBtn.parentElement.getBoundingClientRect();
     const maxX = parentRect.width - rect.width - 10;
@@ -168,7 +198,7 @@ document.addEventListener("mousemove", (e) => {
   }
 });
 
-// When clicking "Yes"
+// "Yes" Button
 yesBtn.addEventListener("click", () => {
   rejectAudio.pause();
   dateAudio.pause();
@@ -183,7 +213,7 @@ yesBtn.addEventListener("click", () => {
   showFloatingNames();
 });
 
-// When clicking "No"
+// "No" Button
 noBtn.addEventListener("click", () => {
   loveAudio.pause();
   dateAudio.pause();
@@ -197,7 +227,7 @@ noBtn.addEventListener("click", () => {
   createBrokenHearts();
 });
 
-// When clicking "Date"
+// "Date" Button
 dateBtn.addEventListener("click", () => {
   loveAudio.pause();
   rejectAudio.pause();
@@ -212,7 +242,11 @@ dateBtn.addEventListener("click", () => {
   showFloatingNames("Let's Go on a Date 💑");
 });
 
-// Floating hearts
+
+/* ============================
+    HEART ANIMATIONS
+============================= */
+
 function createHeart() {
   const heart = document.createElement("div");
   heart.classList.add("heart");
@@ -226,28 +260,86 @@ function createHeart() {
 setInterval(createHeart, 200);
 
 function createBurstHearts() {
-  for (let i = 0; i < 100; i++) setTimeout(createHeart, i * 100);
-}
-
-// Floating Names
-function showFloatingNames(textMessage = "T ❤️ Y") {
-  const text = document.createElement("div");
-  text.classList.add("floating-text");
-  text.innerText = textMessage;
-  document.body.appendChild(text);
-  setTimeout(() => text.remove(), 5000);
-}
-
-// Broken Hearts fall animation
-function createBrokenHearts() {
-  for (let i = 0; i < 15; i++) {
-    const heart = document.createElement("div");
-    heart.classList.add("broken-heart");
-    heart.innerHTML = "💔";
-    heart.style.left = Math.random() * 100 + "vw";
-    heart.style.animationDuration = Math.random() * 2 + 2 + "s";
-    heart.style.fontSize = Math.random() * 20 + 15 + "px";
-    document.body.appendChild(heart);
-    setTimeout(() => heart.remove(), 3000);
+  for (let i = 0; i < 80; i++) {
+    setTimeout(createHeart, i * 50);
   }
 }
+
+function showFloatingNames(text = "T ❤️ Y") {
+  const t = document.createElement("div");
+  t.classList.add("floating-text");
+  t.innerText = text;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 5000);
+}
+
+function createBrokenHearts() {
+  for (let i = 0; i < 15; i++) {
+    const h = document.createElement("div");
+    h.classList.add("broken-heart");
+    h.innerHTML = "💔";
+    h.style.left = Math.random() * 100 + "vw";
+    h.style.animationDuration = Math.random() * 2 + 2 + "s";
+    h.style.fontSize = Math.random() * 20 + 15 + "px";
+    document.body.appendChild(h);
+    setTimeout(() => h.remove(), 3000);
+  }
+}
+
+
+/* ============================
+       SONGS SECTION
+============================= */
+
+const songsBtn = document.getElementById("songs");
+const songsSection = document.getElementById("songsSection");
+const songsListDiv = document.getElementById("songsList");
+const songPlayer = document.getElementById("songPlayer");
+
+songsSection.style.display = "none";
+
+songsBtn.addEventListener("click", async () => {
+  if (!confirm("Want to listen to our favorite songs? 🎶")) return;
+
+  songsSection.style.display = "block";
+  songsSection.scrollIntoView({ behavior: "smooth" });
+  songsListDiv.innerHTML = "<p>Fetching songs from cloud ☁️...</p>";
+
+  try {
+    let res = await fetch(`${apiBase}/api/vault`);
+    let data = await res.json();
+
+    if (!data.songs || data.songs.length === 0) {
+      res = await fetch(`${apiBase}/api/songs`);
+      data = await res.json();
+    }
+
+    if (!data.songs || data.songs.length === 0) {
+      songsListDiv.innerHTML = "<p>No songs found 😢</p>";
+      return;
+    }
+
+    songsListDiv.innerHTML = "";
+
+    data.songs.forEach(item => {
+      const url = item.url || item;
+      const name = decodeURIComponent(item.name || url.split("/").pop());
+
+      const btn = document.createElement("button");
+      btn.textContent = `▶️ ${name}`;
+      btn.classList.add("song-btn");
+
+      btn.addEventListener("click", () => {
+        songPlayer.src = url;
+        songPlayer.style.display = "block";
+        songPlayer.play();
+      });
+
+      songsListDiv.appendChild(btn);
+    });
+
+  } catch (err) {
+    songsListDiv.innerHTML = "<p>Error loading songs ⚠️</p>";
+    console.error(err);
+  }
+});
